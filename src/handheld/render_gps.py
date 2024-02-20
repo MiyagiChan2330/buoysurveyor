@@ -7,6 +7,7 @@ import urllib.request
 import numpy as np
 import netCDF4
 import sx126x
+import os 
 
 zoom = 16
 request = False
@@ -27,7 +28,8 @@ def open_GEBCO_file(filepath):
     #   filepath = filepath to GEBCO file
     #
     #
-    NetCDF_dataset = netCDF4.Dataset(filepath)
+    dir_path = os.path.dirname(os.path.realpath(__file__)) + filepath
+    NetCDF_dataset = netCDF4.Dataset(dir_path)
     lats = NetCDF_dataset.variables['lat'][:]
     lons = NetCDF_dataset.variables['lon'][:]
     return NetCDF_dataset, lats, lons
