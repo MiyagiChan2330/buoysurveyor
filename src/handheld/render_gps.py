@@ -83,7 +83,7 @@ time.sleep(2)
 #
 #Tests
 #
-gebco, lats, lons  = open_GEBCO_file('depthinfo.nc')
+gebco, lats, lons  = open_GEBCO_file('/depthinfo.nc')
 node = sx126x.sx126x(serial_num = "/dev/ttyS0",freq=868,addr=0,power=22,rssi=True,air_speed=2400,relay=False)
 
 def deg2num(lat_deg, lon_deg, zoom):
