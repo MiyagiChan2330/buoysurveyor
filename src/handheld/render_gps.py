@@ -179,6 +179,8 @@ if ser.is_open:
                 cv2.putText(frame,"Satellite: "+str(data.num_sats),(200,20), cv2.FONT_HERSHEY_DUPLEX, .5,(0,255,0),2,cv2.LINE_AA)
                 cv2.putText(frame,"Alt/Depth: "+str(elevation),(350,20), cv2.FONT_HERSHEY_DUPLEX, .5,(0,255,0),2,cv2.LINE_AA)
                 cv2.imshow(winname, frame)
+                txt = "image_{lat:.3f}_{lon:.3f}"
+                cv2.imwrite(txt.format(lat = data.latitude, lon = data.longitude),frame)
                 cv2.waitKey(10)
             #except Exception as e: print(e)
             except: pass
