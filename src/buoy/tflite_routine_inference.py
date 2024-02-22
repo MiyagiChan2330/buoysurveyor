@@ -110,6 +110,7 @@ def routine_Detect(weights,folder_path,img_size,conf_thres,iou_thres):
     print("Initializing detection Routine...")
     for file in glob(os.path.join(folder_path,'*')):
         numDetections += detect_image(weights,file,img_size,conf_thres,iou_thres)
+        os.remove(file)
 
     lockprocessing = False
     lock.release()
