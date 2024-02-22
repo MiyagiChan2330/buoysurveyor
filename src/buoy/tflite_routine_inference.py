@@ -144,7 +144,7 @@ def routine_SendMessage():
 
 def routine_CaptureImage(folder_path):
     timestr = time.strftime("%Y%m%d-%H%M%S")
-    command = "libcamera-still -o /" + folder_path + timestr + ".jpg --nopreview --vflip --hflip --width 640 --height 640"
+    command = "libcamera-still -o " + folder_path + timestr + ".jpg --nopreview --vflip --hflip --width 640 --height 640"
     os.system(command)
 
 if __name__ == '__main__':
