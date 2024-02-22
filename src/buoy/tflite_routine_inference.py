@@ -142,6 +142,11 @@ def routine_SendMessage():
     send_deal(message)
     print("Lora Message Sent!")
 
+def routine_CaptureImage(folder_path):
+    timestr = time.strftime("%Y%m%d-%H%M%S")
+    command = "libcamera-still -o /" + folder_path + timestr + ".jpg --nopreview --vflip --hflip --width 640 --height 640"
+    os.system(command)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-w','--weights', type=str, default='yolov5s-fp16.tflite', help='model.tflite path(s)')
@@ -153,7 +158,8 @@ if __name__ == '__main__':
     opt = parser.parse_args()
     print(opt)
 
-    detection = ThreadTaskRepeating(20, routine_InitDetect, opt.weights ,opt.folder_path,opt.img_size,opt.conf_thres,opt.iou_thres)
+    capture = ThreadTaskRepeating(60, routine_CaptureImage)
+    detection = ThreadTaskRepeating(500, routine_InitDetect, opt.weights ,opt.folder_path,opt.img_size,opt.conf_thres,opt.iou_thres)
     debug = ThreadTaskRepeating(20, routine_Debug)
     reset = ThreadTaskRepeating(3600, routine_HourlyReset)
     send = ThreadTaskRepeating(3, routine_SendMessage)
