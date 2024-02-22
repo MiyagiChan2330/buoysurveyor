@@ -129,19 +129,22 @@ def routine_HourlyReset():
     print("new per-hour num" + str(detectionsPerHour))
     
 def routine_SendMessage():
-    dt = datetime.now()
-    lock.acquire()
-    global gpsdata
-    global detectionsPerHour
-    gpsdata = read_gps_data()
-    lock.release()
-    send_detection = detectionsPerHour
-    if detectionsPerHour <= 0:
-        send_detection = detectionsLastHour
+    if lockprocessing == False:
+        dt = datetime.now()
+        lock.acquire()
+        global gpsdata
+        global detectionsPerHour
+        gpsdata = read_gps_data()
+        lock.release()
+        send_detection = detectionsPerHour
+        if detectionsPerHour <= 0:
+            send_detection = detectionsLastHour
         
-    message = "0,868, Device ID {devid} | Detected: {detect} | Time: {time} | Location: {loc}".format(devid = deviceID, detect = send_detection, time = str(dt), loc = gpsdata)
-    send_deal(message)
-    print("Lora Message Sent!")
+        message = "0,868, Device ID {devid} | Detected: {detect} | Time: {time} | Location: {loc}".format(devid = deviceID, detect = send_detection, time = str(dt), loc = gpsdata)
+        send_deal(message)
+        print("Lora Message Sent!")
+     else:
+        print("Detection Routine Ongoing Cancelled send message...")
 
 def routine_CaptureImage(folder_path):
     global lockprocessing
