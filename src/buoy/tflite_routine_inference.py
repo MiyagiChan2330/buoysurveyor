@@ -158,8 +158,8 @@ if __name__ == '__main__':
     opt = parser.parse_args()
     print(opt)
 
-    capture = ThreadTaskRepeating(60, routine_CaptureImage)
-    detection = ThreadTaskRepeating(500, routine_InitDetect, opt.weights ,opt.folder_path,opt.img_size,opt.conf_thres,opt.iou_thres)
+    capture = ThreadTaskRepeating(60, routine_CaptureImage, opt.folder_path)
+    detection = ThreadTaskRepeating(500, routine_InitDetect, opt.weights,opt.folder_path,opt.img_size,opt.conf_thres,opt.iou_thres)
     debug = ThreadTaskRepeating(20, routine_Debug)
     reset = ThreadTaskRepeating(3600, routine_HourlyReset)
     send = ThreadTaskRepeating(3, routine_SendMessage)
