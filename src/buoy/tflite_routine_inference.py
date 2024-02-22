@@ -143,9 +143,13 @@ def routine_SendMessage():
     print("Lora Message Sent!")
 
 def routine_CaptureImage(folder_path):
-    timestr = time.strftime("%Y%m%d-%H%M%S")
-    command = "libcamera-still -o " + folder_path + timestr + ".jpg --nopreview --vflip --hflip --width 640 --height 640"
-    os.system(command)
+    global lockprocessing
+    if lockprocessing == False:
+        timestr = time.strftime("%Y%m%d-%H%M%S")
+        command = "libcamera-still -o " + folder_path + timestr + ".jpg --nopreview --vflip --hflip --width 640 --height 640"
+        os.system(command)
+    else:
+        print("Detection Routine Ongoing Cancelled capture image...")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -158,7 +162,7 @@ if __name__ == '__main__':
     opt = parser.parse_args()
     print(opt)
 
-    capture = ThreadTaskRepeating(20, routine_CaptureImage, opt.folder_path)
+    capture = ThreadTaskRepeating(16, routine_CaptureImage, opt.folder_path)
     detection = ThreadTaskRepeating(60, routine_InitDetect, opt.weights,opt.folder_path,opt.img_size,opt.conf_thres,opt.iou_thres)
     debug = ThreadTaskRepeating(20, routine_Debug)
     reset = ThreadTaskRepeating(3600, routine_HourlyReset)
