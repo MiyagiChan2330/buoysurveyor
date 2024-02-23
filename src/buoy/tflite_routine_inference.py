@@ -57,7 +57,7 @@ class DetectionMutex(threading.Thread):
     def run(self):
         lock.acquire()
         global detectionIsRunning
-        detectionIsRunning = val
+        detectionIsRunning = self.val
         lock.release()
 
 
