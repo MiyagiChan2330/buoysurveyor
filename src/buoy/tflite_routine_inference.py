@@ -52,7 +52,7 @@ class DetectionCounterThread(threading.Thread):
 class DetectionMutex(threading.Thread):
     def __init__(self, val):
         self.val = val
-        super(DetectionCounterThread, self).__init__()
+        super(DetectionMutex, self).__init__()
     
     def run(self):
         lock.acquire()
