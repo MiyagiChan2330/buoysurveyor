@@ -89,7 +89,11 @@ class ThreadTaskRepeating(object):
     self.is_running = False
 
 def routine_InitDetect(weights,folder_path,img_size,conf_thres,iou_thres):
-    rt = routine_Detect(weights ,folder_path,img_size,conf_thres,iou_thres)
+    if detectionIsRunning == False:
+        rt = routine_Detect(weights ,folder_path,img_size,conf_thres,iou_thres)
+    else:
+        print("routine_InitDetect due to detection algorithm")
+
 
 def routine_Detect(weights,folder_path,img_size,conf_thres,iou_thres):
     print("routine_Detect")
