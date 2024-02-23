@@ -20,6 +20,7 @@ detectionsPerHour = 0
 lock = threading.Lock()
 node = sx126x.sx126x(serial_num = "/dev/ttyS0",freq=868,addr=0,power=22,rssi=True,air_speed=2400,relay=False)
 gpsdata = ''
+detectionIsRunning = False
 logging.basicConfig(filename='std.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
 logger=logging.getLogger() 
 logger.setLevel(logging.DEBUG) 
@@ -46,6 +47,17 @@ class DetectionCounterThread(threading.Thread):
         lock.acquire()
         global detectionsLastHour
         detectionsLastHour = 0
+        lock.release()
+
+class DetectionMutex(threading.Thread):
+    def __init__(self, val):
+        self.val = val
+        super(DetectionCounterThread, self).__init__()
+    
+    def run(self):
+        lock.acquire()
+        global detectionIsRunning
+        detectionIsRunning = val
         lock.release()
 
 
@@ -84,6 +96,9 @@ def routine_Detect(weights,folder_path,img_size,conf_thres,iou_thres):
     numDetections = 0
     zip_file_path = os.path.join(folder_path,'../zip/images.zip')
 
+    detectionStart = DetectionMutex(True)
+    detectionStart.start()
+
     print("Initializing detection Routine...")    
     for file in glob(os.path.join(folder_path,'*')):
         numDetections += detect_image(weights,file,img_size,conf_thres,iou_thres)
@@ -92,6 +107,10 @@ def routine_Detect(weights,folder_path,img_size,conf_thres,iou_thres):
         os.remove(file)
 
     print("Detected this batch:" + str(numDetections))
+
+    detectionEnd = DetectionMutex(False)
+    detectionEnd.start()
+
     th = DetectionCounterThread(numDetections)
     th.start()
     
@@ -133,7 +152,7 @@ def routine_HourlyReset():
     print("new per-hour num" + str(detectionsPerHour))
     
 def routine_SendMessage():
-    if detection.is_running == False:
+    if detectionIsRunning == False:
         dt = datetime.now()
         lock.acquire()
         global gpsdata
@@ -153,7 +172,7 @@ def routine_SendMessage():
 
 
 def routine_CaptureImage(folder_path):
-    if detection.is_running == False:
+    if detectionIsRunning == False:
         timestr = time.strftime("%Y%m%d-%H%M%S")
         command = "libcamera-still -o " + folder_path + timestr + ".jpg --nopreview --vflip --hflip --width 640 --height 640"
         os.system(command)
