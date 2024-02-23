@@ -118,7 +118,7 @@ def routine_Detect(weights,folder_path,img_size,conf_thres,iou_thres):
     lockprocessing = True
     numDetections = 0
 
-    zip_file_path = '../zip/images.zip'
+    zip_file_path = os.path.join(folder_path,'../zip/images.zip')
 
     print("Initializing detection Routine...")    
     for file in glob(os.path.join(folder_path,'*')):
