@@ -123,7 +123,7 @@ def routine_Detect(weights,folder_path,img_size,conf_thres,iou_thres):
     print("Initializing detection Routine...")    
     for file in glob(os.path.join(folder_path,'*')):
         numDetections += detect_image(weights,file,img_size,conf_thres,iou_thres)
-        logger.info("Detections for " + file + "is:" str(numDetections))
+        logger.info("Detections for " + file + "is: " + str(numDetections))
         add_single_file_to_zip(zip_file_path, file)
         os.remove(file)
 
