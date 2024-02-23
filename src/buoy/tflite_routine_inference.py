@@ -20,7 +20,6 @@ detectionsPerHour = 0
 lock = threading.Lock()
 node = sx126x.sx126x(serial_num = "/dev/ttyS0",freq=868,addr=0,power=22,rssi=True,air_speed=2400,relay=False)
 gpsdata = ''
-lockprocessing = False
 logging.basicConfig(filename='std.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
 logger=logging.getLogger() 
 logger.setLevel(logging.DEBUG) 
@@ -105,17 +104,11 @@ def add_single_file_to_zip(zip_file_path, file_to_add):
         zip_ref.write(file_to_add)
 
 def routine_InitDetect(weights,folder_path,img_size,conf_thres,iou_thres):
-    global lockprocessing
-    if lockprocessing == False:
-        rt = routine_Detect(weights ,folder_path,img_size,conf_thres,iou_thres)
-    else:
-        print("Detection Routine Ongoing...")
+    rt = routine_Detect(weights ,folder_path,img_size,conf_thres,iou_thres)
 
 def routine_Detect(weights,folder_path,img_size,conf_thres,iou_thres):
     print("routine_Detect")
     lock.acquire()
-    global lockprocessing
-    lockprocessing = True
     numDetections = 0
 
     zip_file_path = os.path.join(folder_path,'../zip/images.zip')
@@ -127,7 +120,6 @@ def routine_Detect(weights,folder_path,img_size,conf_thres,iou_thres):
         add_single_file_to_zip(zip_file_path, file)
         os.remove(file)
 
-    lockprocessing = False
     lock.release()
 
     print("Detected this batch:" + str(numDetections))
@@ -144,33 +136,27 @@ def routine_HourlyReset():
     print("new per-hour num" + str(detectionsPerHour))
     
 def routine_SendMessage():
-    if lockprocessing == False:
-        dt = datetime.now()
-        lock.acquire()
-        global gpsdata
-        global detectionsPerHour
-        gpsdata = read_gps_data()
-        lock.release()
-        send_detection = detectionsPerHour
-        if detectionsPerHour <= 0:
-            send_detection = detectionsLastHour
+    dt = datetime.now()
+    lock.acquire()
+    global gpsdata
+    global detectionsPerHour
+    gpsdata = read_gps_data()
+    lock.release()
+    send_detection = detectionsPerHour
+    if detectionsPerHour <= 0:
+        send_detection = detectionsLastHour
         
-        message = "0,868, Device ID {devid} | Detected: {detect} | Time: {time} | Location: {loc}".format(devid = deviceID, detect = send_detection, time = str(dt), loc = gpsdata)
-        send_deal(message)
-        logger.info(message)
-        print("Lora Message Sent!")
-    else:
-        print("Detection Routine Ongoing Cancelled send message...")
+    message = "0,868, Device ID {devid} | Detected: {detect} | Time: {time} | Location: {loc}".format(devid = deviceID, detect = send_detection, time = str(dt), loc = gpsdata)
+    send_deal(message)
+    logger.info(message)
+    print("Lora Message Sent!")
+
 
 def routine_CaptureImage(folder_path):
-    global lockprocessing
-    if lockprocessing == False:
-        timestr = time.strftime("%Y%m%d-%H%M%S")
-        command = "libcamera-still -o " + folder_path + timestr + ".jpg --nopreview --vflip --hflip --width 640 --height 640"
-        os.system(command)
-    else:
-        print("Detection Routine Ongoing Cancelled capture image...")
-
+    timestr = time.strftime("%Y%m%d-%H%M%S")
+    command = "libcamera-still -o " + folder_path + timestr + ".jpg --nopreview --vflip --hflip --width 640 --height 640"
+    os.system(command)
+   
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-w','--weights', type=str, default='yolov5s-fp16.tflite', help='model.tflite path(s)')
