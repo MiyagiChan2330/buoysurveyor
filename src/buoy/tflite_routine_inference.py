@@ -75,6 +75,12 @@ class ThreadTaskRepeating(object):
   def stop(self):
     self._timer.cancel()
     self.is_running = False
+
+capture = ThreadTaskRepeating(16, routine_CaptureImage, opt.folder_path)
+detection = ThreadTaskRepeating(60, routine_InitDetect, opt.weights,opt.folder_path,opt.img_size,opt.conf_thres,opt.iou_thres)
+debug = ThreadTaskRepeating(20, routine_Debug)
+reset = ThreadTaskRepeating(3600, routine_HourlyReset)
+send = ThreadTaskRepeating(3, routine_SendMessage)
     
 def read_gps_data(serial_port='/dev/ttyACM0', baudrate=9600):
     ser = serial.Serial(serial_port, baudrate=baudrate, timeout=1)
@@ -132,26 +138,32 @@ def routine_HourlyReset():
     print("new per-hour num" + str(detectionsPerHour))
     
 def routine_SendMessage():
-    dt = datetime.now()
-    lock.acquire()
-    global gpsdata
-    global detectionsPerHour
-    gpsdata = read_gps_data()
-    lock.release()
-    send_detection = detectionsPerHour
-    if detectionsPerHour <= 0:
-        send_detection = detectionsLastHour
-        
-    message = "0,868, Device ID {devid} | Detected: {detect} | Time: {time} | Location: {loc}".format(devid = deviceID, detect = send_detection, time = str(dt), loc = gpsdata)
-    send_deal(message)
-    logger.info(message)
-    print("Lora Message Sent!")
+    if detection.is_running == False:
+        dt = datetime.now()
+        lock.acquire()
+        global gpsdata
+        global detectionsPerHour
+        gpsdata = read_gps_data()
+        lock.release()
+        send_detection = detectionsPerHour
+        if detectionsPerHour <= 0:
+            send_detection = detectionsLastHour
+            
+        message = "0,868, Device ID {devid} | Detected: {detect} | Time: {time} | Location: {loc}".format(devid = deviceID, detect = send_detection, time = str(dt), loc = gpsdata)
+        send_deal(message)
+        logger.info(message)
+        print("Lora Message Sent!")
+    else:
+        print("routine_SendMessage due to detection algorithm")
 
 
 def routine_CaptureImage(folder_path):
-    timestr = time.strftime("%Y%m%d-%H%M%S")
-    command = "libcamera-still -o " + folder_path + timestr + ".jpg --nopreview --vflip --hflip --width 640 --height 640"
-    os.system(command)
+    if detection.is_running == False:
+        timestr = time.strftime("%Y%m%d-%H%M%S")
+        command = "libcamera-still -o " + folder_path + timestr + ".jpg --nopreview --vflip --hflip --width 640 --height 640"
+        os.system(command)
+    else:
+        print("routine_CaptureImage due to detection algorithm")
    
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -164,11 +176,7 @@ if __name__ == '__main__':
     opt = parser.parse_args()
     print(opt)
 
-    capture = ThreadTaskRepeating(16, routine_CaptureImage, opt.folder_path)
-    detection = ThreadTaskRepeating(60, routine_InitDetect, opt.weights,opt.folder_path,opt.img_size,opt.conf_thres,opt.iou_thres)
-    debug = ThreadTaskRepeating(20, routine_Debug)
-    reset = ThreadTaskRepeating(3600, routine_HourlyReset)
-    send = ThreadTaskRepeating(3, routine_SendMessage)
+   
 
     while True:
         pass
