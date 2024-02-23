@@ -11,6 +11,8 @@ import sx126x
 import serial
 from datetime import datetime
 import pynmea2
+import zipfile
+import logging 
 
 deviceID = 1
 detectionsLastHour = 0
@@ -19,6 +21,7 @@ lock = threading.Lock()
 node = sx126x.sx126x(serial_num = "/dev/ttyS0",freq=868,addr=0,power=22,rssi=True,air_speed=2400,relay=False)
 gpsdata = ''
 lockprocessing = False
+logging.basicConfig(filename='std.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
 
 class DetectionCounterThread(threading.Thread):
     def __init__(self, numadd):
@@ -94,6 +97,11 @@ def send_deal(text):
     data = bytes([int(get_t[0])>>8]) + bytes([int(get_t[0])&0xff]) + bytes([offset_frequence]) + bytes([node.addr>>8]) + bytes([node.addr&0xff]) + bytes([node.offset_freq]) + get_t[2].encode()
     node.send(data)
 
+
+def add_single_file_to_zip(zip_file_path, file_to_add):
+    with zipfile.ZipFile(zip_file_path, 'a') as zip_ref:
+        zip_ref.write(file_to_add)
+
 def routine_InitDetect(weights,folder_path,img_size,conf_thres,iou_thres):
     global lockprocessing
     if lockprocessing == False:
@@ -107,9 +115,13 @@ def routine_Detect(weights,folder_path,img_size,conf_thres,iou_thres):
     global lockprocessing
     lockprocessing = True
     numDetections = 0
-    print("Initializing detection Routine...")
+
+    zip_file_path = '../zip/images.zip'
+
+    print("Initializing detection Routine...")    
     for file in glob(os.path.join(folder_path,'*')):
         numDetections += detect_image(weights,file,img_size,conf_thres,iou_thres)
+        add_single_file_to_zip(zip_file_path, file)
         os.remove(file)
 
     lockprocessing = False
@@ -142,6 +154,7 @@ def routine_SendMessage():
         
         message = "0,868, Device ID {devid} | Detected: {detect} | Time: {time} | Location: {loc}".format(devid = deviceID, detect = send_detection, time = str(dt), loc = gpsdata)
         send_deal(message)
+        logging.info(message)
         print("Lora Message Sent!")
      else:
         print("Detection Routine Ongoing Cancelled send message...")
