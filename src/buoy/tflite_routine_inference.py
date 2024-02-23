@@ -22,6 +22,8 @@ node = sx126x.sx126x(serial_num = "/dev/ttyS0",freq=868,addr=0,power=22,rssi=Tru
 gpsdata = ''
 lockprocessing = False
 logging.basicConfig(filename='std.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
+logger=logging.getLogger() 
+logger.setLevel(logging.DEBUG) 
 
 class DetectionCounterThread(threading.Thread):
     def __init__(self, numadd):
@@ -154,7 +156,7 @@ def routine_SendMessage():
         
         message = "0,868, Device ID {devid} | Detected: {detect} | Time: {time} | Location: {loc}".format(devid = deviceID, detect = send_detection, time = str(dt), loc = gpsdata)
         send_deal(message)
-        logging.info(message)
+        logger.info(message)
         print("Lora Message Sent!")
     else:
         print("Detection Routine Ongoing Cancelled send message...")
