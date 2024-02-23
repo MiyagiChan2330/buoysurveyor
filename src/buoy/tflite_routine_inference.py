@@ -76,12 +76,27 @@ class ThreadTaskRepeating(object):
     self._timer.cancel()
     self.is_running = False
 
-capture = ThreadTaskRepeating(16, routine_CaptureImage, opt.folder_path)
-detection = ThreadTaskRepeating(60, routine_InitDetect, opt.weights,opt.folder_path,opt.img_size,opt.conf_thres,opt.iou_thres)
-debug = ThreadTaskRepeating(20, routine_Debug)
-reset = ThreadTaskRepeating(3600, routine_HourlyReset)
-send = ThreadTaskRepeating(3, routine_SendMessage)
+def routine_InitDetect(weights,folder_path,img_size,conf_thres,iou_thres):
+    rt = routine_Detect(weights ,folder_path,img_size,conf_thres,iou_thres)
+
+def routine_Detect(weights,folder_path,img_size,conf_thres,iou_thres):
+    print("routine_Detect")
+    numDetections = 0
+    zip_file_path = os.path.join(folder_path,'../zip/images.zip')
+
+    print("Initializing detection Routine...")    
+    for file in glob(os.path.join(folder_path,'*')):
+        numDetections += detect_image(weights,file,img_size,conf_thres,iou_thres)
+        logger.info("Detections for " + file + "is: " + str(numDetections))
+        add_single_file_to_zip(zip_file_path, file)
+        os.remove(file)
+
+    print("Detected this batch:" + str(numDetections))
+    th = DetectionCounterThread(numDetections)
+    th.start()
     
+detection = ThreadTaskRepeating(60, routine_InitDetect, opt.weights,opt.folder_path,opt.img_size,opt.conf_thres,opt.iou_thres)
+
 def read_gps_data(serial_port='/dev/ttyACM0', baudrate=9600):
     ser = serial.Serial(serial_port, baudrate=baudrate, timeout=1)
     while True:
@@ -108,25 +123,6 @@ def send_deal(text):
 def add_single_file_to_zip(zip_file_path, file_to_add):
     with zipfile.ZipFile(zip_file_path, 'a') as zip_ref:
         zip_ref.write(file_to_add)
-
-def routine_InitDetect(weights,folder_path,img_size,conf_thres,iou_thres):
-    rt = routine_Detect(weights ,folder_path,img_size,conf_thres,iou_thres)
-
-def routine_Detect(weights,folder_path,img_size,conf_thres,iou_thres):
-    print("routine_Detect")
-    numDetections = 0
-    zip_file_path = os.path.join(folder_path,'../zip/images.zip')
-
-    print("Initializing detection Routine...")    
-    for file in glob(os.path.join(folder_path,'*')):
-        numDetections += detect_image(weights,file,img_size,conf_thres,iou_thres)
-        logger.info("Detections for " + file + "is: " + str(numDetections))
-        add_single_file_to_zip(zip_file_path, file)
-        os.remove(file)
-
-    print("Detected this batch:" + str(numDetections))
-    th = DetectionCounterThread(numDetections)
-    th.start()
     
 def routine_Debug():
     print("detection num" + str(detectionsLastHour))
@@ -165,6 +161,12 @@ def routine_CaptureImage(folder_path):
     else:
         print("routine_CaptureImage due to detection algorithm")
    
+debug = ThreadTaskRepeating(20, routine_Debug)
+reset = ThreadTaskRepeating(3600, routine_HourlyReset)
+send = ThreadTaskRepeating(3, routine_SendMessage)
+capture = ThreadTaskRepeating(16, routine_CaptureImage, opt.folder_path)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-w','--weights', type=str, default='yolov5s-fp16.tflite', help='model.tflite path(s)')
