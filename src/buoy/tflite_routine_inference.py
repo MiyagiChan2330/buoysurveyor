@@ -90,7 +90,11 @@ class ThreadTaskRepeating(object):
 
 def routine_InitDetect(weights,folder_path,img_size,conf_thres,iou_thres):
     if detectionIsRunning == False:
+        detectionStart = DetectionMutex(True)
+        detectionStart.start()
         rt = routine_Detect(weights ,folder_path,img_size,conf_thres,iou_thres)
+        detectionEnd = DetectionMutex(False)
+        detectionEnd.start()
     else:
         print("routine_InitDetect due to detection algorithm")
 
@@ -100,9 +104,6 @@ def routine_Detect(weights,folder_path,img_size,conf_thres,iou_thres):
     numDetections = 0
     zip_file_path = os.path.join(folder_path,'../zip/images.zip')
 
-    detectionStart = DetectionMutex(True)
-    detectionStart.start()
-
     print("Initializing detection Routine...")    
     for file in glob(os.path.join(folder_path,'*')):
         numDetections += detect_image(weights,file,img_size,conf_thres,iou_thres)
@@ -111,10 +112,6 @@ def routine_Detect(weights,folder_path,img_size,conf_thres,iou_thres):
         os.remove(file)
 
     print("Detected this batch:" + str(numDetections))
-
-    detectionEnd = DetectionMutex(False)
-    detectionEnd.start()
-
     th = DetectionCounterThread(numDetections)
     th.start()
     
