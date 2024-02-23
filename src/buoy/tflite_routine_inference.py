@@ -108,9 +108,7 @@ def routine_InitDetect(weights,folder_path,img_size,conf_thres,iou_thres):
 
 def routine_Detect(weights,folder_path,img_size,conf_thres,iou_thres):
     print("routine_Detect")
-    lock.acquire()
     numDetections = 0
-
     zip_file_path = os.path.join(folder_path,'../zip/images.zip')
 
     print("Initializing detection Routine...")    
@@ -119,8 +117,6 @@ def routine_Detect(weights,folder_path,img_size,conf_thres,iou_thres):
         logger.info("Detections for " + file + "is: " + str(numDetections))
         add_single_file_to_zip(zip_file_path, file)
         os.remove(file)
-
-    lock.release()
 
     print("Detected this batch:" + str(numDetections))
     th = DetectionCounterThread(numDetections)
