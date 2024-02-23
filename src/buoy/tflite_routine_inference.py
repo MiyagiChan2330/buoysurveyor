@@ -156,7 +156,7 @@ def routine_SendMessage():
         send_deal(message)
         logging.info(message)
         print("Lora Message Sent!")
-     else:
+    else:
         print("Detection Routine Ongoing Cancelled send message...")
 
 def routine_CaptureImage(folder_path):
