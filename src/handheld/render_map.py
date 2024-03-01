@@ -2,8 +2,53 @@ import math
 import cv2
 import urllib.request
 import numpy as np
+import netCDF4
+import os 
 
 resizeRatio = 1
+
+def geo_idx(dd, dd_array):
+    #
+    #   returns the index of the closest degrees decimal value in the array.
+    #   dd = degrees decimal (Float64)
+    #   dd_array = arrach of degrees decimal values (Float64)
+    #
+    #
+    geo_index = (np.abs(dd_array - dd)).argmin()
+    return geo_index
+
+def open_GEBCO_file(filepath):
+    #
+    #   returns dataset in NetCDF format and from the dataset arrays of the latitudes and longitudes
+    #   filepath = filepath to GEBCO file
+    #
+    #
+    dir_path = os.path.dirname(os.path.realpath(__file__)) + filepath
+    NetCDF_dataset = netCDF4.Dataset(dir_path)
+    lats = NetCDF_dataset.variables['lat'][:]
+    lons = NetCDF_dataset.variables['lon'][:]
+    return NetCDF_dataset, lats, lons
+
+def get_GEBCO_info(dataset):
+    #
+    #   prints metadata in GEBCO file
+    #
+    #
+    print(dataset.data_model)
+
+    for attr in dataset.ncattrs():
+        print(attr, '=', getattr(dataset, attr))
+
+    print(dataset.variables)
+    return
+
+def get_elevation(lat, lon):
+    #
+    # returns the elevation given a latitude and longitude
+    #
+    lat_index = geo_idx(lat, lats)
+    lon_index = geo_idx(lon, lons)
+    return gebco.variables['elevation'][lat_index, lon_index]
 
 def deg2num(lat_deg, lon_deg, zoom):
   lat_rad = math.radians(lat_deg)
@@ -18,6 +63,8 @@ def num2deg(xtile, ytile, zoom):
   lat_rad = math.atan(math.sinh(math.pi * (1 - 2 * ytile / n)))
   lat_deg = math.degrees(lat_rad)
   return (lat_deg, lon_deg)
+
+gebco, lats, lons  = open_GEBCO_file('/depthinfo.nc')
 
 def render(lat_deg, lon_deg, zoom = 16):
     global img
@@ -59,12 +106,24 @@ def render(lat_deg, lon_deg, zoom = 16):
             img = np.concatenate((img, img1), axis=1)
 
     #img = cv2.resize(img,(int(img.shape[0]/resizeRatio),int(img.shape[1]/resizeRatio)))
+    speed = 1
     cv2.namedWindow("image", cv2.WINDOW_NORMAL | cv2.WINDOW_FREERATIO)
-    cv2.setWindowProperty("image",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
+   #cv2.setWindowProperty("image",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
+    elevation = -5#get_elevation(lat_deg, lon_deg)
+    cv2.rectangle(img,(0,0),(840,30),(0,0,0), cv2.FILLED)
+    cv2.line(img,(465,5),(475,15),(0,0,255),3)
+    cv2.line(img,(465,15),(475,5),(0,0,255),3)
+    cv2.circle(img, (10,130), 10, (153,0,0), -1)
+    cv2.circle(img, (10,170), 10, (153,0,0), -1)
+    cv2.putText(img,"Speed: "+str(round(speed))+"kmph",(10,20), cv2.FONT_HERSHEY_DUPLEX, .5,(0,255,0),2,cv2.LINE_AA)
+    cv2.putText(img,"Satellite: "+str(4),(200,20), cv2.FONT_HERSHEY_DUPLEX, .5,(0,255,0),2,cv2.LINE_AA)
+    cv2.putText(img,"Alt/Depth: "+str(elevation),(350,20), cv2.FONT_HERSHEY_DUPLEX, .5,(0,255,0),2,cv2.LINE_AA)
     cv2.imshow("image",img)
+    imgfilename = r"img_{0}_{1}_{2}.png"
+    cv2.imwrite(imgfilename.format(lat_deg, lon_deg, zoom), img)
     cv2.waitKey()
     cv2.destroyWindow("image")
     
 
 if __name__ == '__main__':
-    render(14.545254,121.1022186, 16)
+    render(13.762219,121.037923, 16)
