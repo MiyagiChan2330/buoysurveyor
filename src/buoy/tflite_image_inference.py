@@ -40,7 +40,7 @@ def detect_image(weights,image_url,img_size,conf_thres,iou_thres):
     print('Imgname:',image_url)
     print('Detections:',len(result_boxes))
 
-    return len(result_boxes)
+    return result_boxes, result_scores, result_class_names, img, original_size
 
 
 
