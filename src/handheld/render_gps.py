@@ -66,6 +66,18 @@ def ecv(event, x, y, flags, param):
         elif (x in range(0,20) and y in range(160,180)):
              zoom = max(zoom - 1, 14)
 
+def get_slope(lat, lon):
+    elevpoint = get_elevation(lat, lon)
+    elevwest = get_elevation(lat, lon - 0.005)
+    eleveast = get_elevation(lat, lon + 0.005)
+    elevnorth = get_elevation(lat - 0.0005, lon)
+    elevsouth = get_elevation(lat + 0.0005, lon)
+
+    elevsidetotal = elevwest + eleveast + elevnorth + elevsouth
+    elevsidetotal /= 4
+
+    return abs(elevsidetotal - elevpoint)
+
 winname = "render"
 cv2.namedWindow(winname, cv2.WINDOW_NORMAL | cv2.WINDOW_FREERATIO)
 cv2.setWindowProperty(winname,cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
@@ -100,6 +112,33 @@ def num2deg(xtile, ytile, zoom):
   lat_deg = math.degrees(lat_rad)
   return (lat_deg, lon_deg)
 
+def rendersphere(lat_deg, lon_deg, img, red,green,blue, text, text2, zoom = 16):
+    x, y = deg2num(lat_deg, lon_deg, zoom)
+    xmin,xmax = x - 1, x + 1
+    ymin,ymax = y - 1, y + 1
+    lat_deg1, lon_deg1 = num2deg(xmin, ymin, zoom)
+    disx, disy = lon_deg - lon_deg1, lat_deg1 - lat_deg
+    pix = round(disx*256/(num2deg(xmin,ymin,zoom)[0] - num2deg(xmin,ymin+1,zoom)[0]))
+    piy = round(disy*256/(num2deg(xmin+1,ymin,zoom)[1] - num2deg(xmin,ymin,zoom)[1]))
+
+    cv2.circle(img,(pix,piy), 7, (255,255,255), -1)
+    cv2.circle(img,(pix,piy), 5, (red,green,blue), -1)
+    cv2.putText(img, text ,(pix + 20 ,piy), cv2.FONT_HERSHEY_COMPLEX_SMALL, .5,(0,0,0),1,cv2.LINE_AA)
+    cv2.putText(img, text2 ,(pix + 20 ,piy + 20), cv2.FONT_HERSHEY_COMPLEX_SMALL, .5,(0,0,0),1,cv2.LINE_AA)
+
+    return img
+
+def centerimage(lat_deg, lon_deg, img, zoom = 16):
+    x, y = deg2num(lat_deg, lon_deg, zoom)
+    xmin,xmax = x - 1, x + 1
+    ymin,ymax = y - 1, y + 1
+    lat_deg1, lon_deg1 = num2deg(xmin, ymin, zoom)
+    disx, disy = lon_deg - lon_deg1, lat_deg1 - lat_deg
+    pix = round(disx*256/(num2deg(xmin,ymin,zoom)[0] - num2deg(xmin,ymin+1,zoom)[0]))
+    piy = round(disy*256/(num2deg(xmin+1,ymin,zoom)[1] - num2deg(xmin,ymin,zoom)[1]))
+    img = img[piy-145:piy+145, pix-240:pix+240]
+    return img
+
 def render(lat_deg, lon_deg, zoom = 16):
     listimg = []
     img = None 
@@ -108,14 +147,6 @@ def render(lat_deg, lon_deg, zoom = 16):
     x, y = deg2num(lat_deg, lon_deg, zoom)
     xmin,xmax = x - 1, x + 1
     ymin,ymax = y - 1, y + 1
-    lat_deg1, lon_deg1 = num2deg(xmin, ymin, zoom)
-    disx, disy = lon_deg - lon_deg1, lat_deg1 - lat_deg
-    pix = round(disx*256/(num2deg(xmin,ymin,zoom)[0] - num2deg(xmin,ymin+1,zoom)[0]))
-    piy = round(disy*256/(num2deg(xmin+1,ymin,zoom)[1] - num2deg(xmin,ymin,zoom)[1]))
-    #print(num2deg(xmin,ymin,zoom))
-    #print(disx,disy)
-    #print(pix,piy)
-    #print(x,y,xmin,ymin,xmax,ymax)
 
     for xtile in range(xmin, xmax+1):
         for ytile in range(ymin, ymax+1):
@@ -142,11 +173,6 @@ def render(lat_deg, lon_deg, zoom = 16):
             img1 = listimg[x]
             img = np.concatenate((img, img1), axis=1)
             
-    cv2.circle(img,(pix,piy), 7, (255,255,255), -1)
-    cv2.circle(img,(pix,piy), 5, (0,0,0), -1)
-    img = img[piy-145:piy+145, pix-240:pix+240]
-    cv2.circle(img,(240,145), 7, (255,255,255), -1)
-    cv2.circle(img,(240,145), 5, (51,153,0), -1)
     return img
  
 if ser.is_open:
@@ -170,14 +196,18 @@ if ser.is_open:
                 frame = render(data.latitude,data.longitude,zoom)
                 node.receive()
                 elevation = get_elevation(data.latitude, data.longitude)
+                slope = get_slope(data.latitude, data.longitude)
+
                 cv2.rectangle(frame,(0,0),(480,30),(0,0,0), cv2.FILLED)
                 cv2.line(frame,(465,5),(475,15),(0,0,255),3)
                 cv2.line(frame,(465,15),(475,5),(0,0,255),3)
-                cv2.circle(frame, (10,130), 10, (153,0,0), -1)
-                cv2.circle(frame, (10,170), 10, (153,0,0), -1)
-                cv2.putText(frame,"Speed: "+str(round(speed))+"kmph",(10,20), cv2.FONT_HERSHEY_DUPLEX, .5,(0,255,0),2,cv2.LINE_AA)
-                cv2.putText(frame,"Satellite: "+str(data.num_sats),(200,20), cv2.FONT_HERSHEY_DUPLEX, .5,(0,255,0),2,cv2.LINE_AA)
-                cv2.putText(frame,"Alt/Depth: "+str(elevation),(350,20), cv2.FONT_HERSHEY_DUPLEX, .5,(0,255,0),2,cv2.LINE_AA)
+
+                frame = rendersphere(data.latitude, data.longitude, frame, 0,255,0, "", "", zoom)
+
+                cv2.putText(frame,"Speed: "+str(round(speed))+"kmph",(5,20), cv2.FONT_HERSHEY_SIMPLEX, .45,(0,255,0),1,cv2.LINE_AA)
+                cv2.putText(frame,"Satellite: "+str(4),(125,20), cv2.FONT_HERSHEY_SIMPLEX, .45,(0,255,0),1,cv2.LINE_AA)
+                cv2.putText(frame,"Alt/Depth: "+str(elevation) +"m",(225,20), cv2.FONT_HERSHEY_SIMPLEX, .45,(0,255,0),1,cv2.LINE_AA)
+                cv2.putText(frame,"Slope: "+str(slope),(350,20), cv2.FONT_HERSHEY_SIMPLEX, .45,(0,255,0),1,cv2.LINE_AA)
                 cv2.imshow(winname, frame)
                 txt = "image_{lat:.3f}_{lon:.3f}"
                 cv2.imwrite(txt.format(lat = data.latitude, lon = data.longitude),frame)
